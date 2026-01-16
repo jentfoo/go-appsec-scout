@@ -11,13 +11,41 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// collectResults runs a source iterator and collects results by type.
+func collectResults(seq iter.Seq2[Result, error]) (subdomains, urls []Result, errors []error) {
+	for r, err := range seq {
+		if err != nil {
+			errors = append(errors, err)
+			continue
+		}
+		switch r.Type {
+		case Subdomain:
+			subdomains = append(subdomains, r)
+		case URL:
+			urls = append(urls, r)
+		}
+	}
+	return
+}
+
+// assertResults validates that all results have the expected source, type, and non-empty value.
+func assertResults(t *testing.T, results []Result, source string, resultType ResultType) {
+	t.Helper()
+
+	for _, r := range results {
+		assert.Equal(t, source, r.Source)
+		assert.Equal(t, resultType, r.Type)
+		assert.NotEmpty(t, r.Value)
+	}
+}
+
 func TestRegister(t *testing.T) {
 	t.Parallel()
 
 	testSource := Source{
 		Name:   "test-register-source",
 		Yields: Subdomain,
-		Run: func(_ context.Context, _ string, _ *http.Client, _ string) iter.Seq2[Result, error] {
+		Run: func(_ context.Context, _ *http.Client, _ string, _ string) iter.Seq2[Result, error] {
 			return func(_ func(Result, error) bool) {}
 		},
 	}
@@ -37,7 +65,7 @@ func TestByName(t *testing.T) {
 		testSource := Source{
 			Name:   "test-byname-source",
 			Yields: Subdomain,
-			Run: func(_ context.Context, _ string, _ *http.Client, _ string) iter.Seq2[Result, error] {
+			Run: func(_ context.Context, _ *http.Client, _ string, _ string) iter.Seq2[Result, error] {
 				return func(_ func(Result, error) bool) {}
 			},
 		}
@@ -56,19 +84,19 @@ func TestByName(t *testing.T) {
 	})
 }
 
-func TestList(t *testing.T) {
+func TestAll(t *testing.T) {
 	t.Parallel()
 
 	testSource := Source{
 		Name:   "test-list-source",
 		Yields: URL,
-		Run: func(_ context.Context, _ string, _ *http.Client, _ string) iter.Seq2[Result, error] {
+		Run: func(_ context.Context, _ *http.Client, _ string, _ string) iter.Seq2[Result, error] {
 			return func(_ func(Result, error) bool) {}
 		},
 	}
 	Register(testSource)
 
-	list := List()
+	list := All()
 
 	require.NotEmpty(t, list)
 
@@ -88,21 +116,21 @@ func TestFilter(t *testing.T) {
 	subSource := Source{
 		Name:   "test-filter-subdomain",
 		Yields: Subdomain,
-		Run: func(_ context.Context, _ string, _ *http.Client, _ string) iter.Seq2[Result, error] {
+		Run: func(_ context.Context, _ *http.Client, _ string, _ string) iter.Seq2[Result, error] {
 			return func(_ func(Result, error) bool) {}
 		},
 	}
 	urlSource := Source{
 		Name:   "test-filter-url",
 		Yields: URL,
-		Run: func(_ context.Context, _ string, _ *http.Client, _ string) iter.Seq2[Result, error] {
+		Run: func(_ context.Context, _ *http.Client, _ string, _ string) iter.Seq2[Result, error] {
 			return func(_ func(Result, error) bool) {}
 		},
 	}
 	bothSource := Source{
 		Name:   "test-filter-both",
 		Yields: Subdomain | URL,
-		Run: func(_ context.Context, _ string, _ *http.Client, _ string) iter.Seq2[Result, error] {
+		Run: func(_ context.Context, _ *http.Client, _ string, _ string) iter.Seq2[Result, error] {
 			return func(_ func(Result, error) bool) {}
 		},
 	}
@@ -112,7 +140,7 @@ func TestFilter(t *testing.T) {
 	Register(bothSource)
 
 	t.Run("subdomain_filter", func(t *testing.T) {
-		subFiltered := Filter(Subdomain)
+		subFiltered := ByType(Subdomain)
 		subNames := make([]string, len(subFiltered))
 		for i, s := range subFiltered {
 			subNames[i] = s.Name
@@ -124,7 +152,7 @@ func TestFilter(t *testing.T) {
 	})
 
 	t.Run("url_filter", func(t *testing.T) {
-		urlFiltered := Filter(URL)
+		urlFiltered := ByType(URL)
 		urlNames := make([]string, len(urlFiltered))
 		for i, s := range urlFiltered {
 			urlNames[i] = s.Name
@@ -142,7 +170,7 @@ func TestNames(t *testing.T) {
 	testSource := Source{
 		Name:   "test-names-source",
 		Yields: Subdomain,
-		Run: func(_ context.Context, _ string, _ *http.Client, _ string) iter.Seq2[Result, error] {
+		Run: func(_ context.Context, _ *http.Client, _ string, _ string) iter.Seq2[Result, error] {
 			return func(_ func(Result, error) bool) {}
 		},
 	}

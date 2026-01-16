@@ -1,6 +1,8 @@
 package scout
 
 import (
+	"context"
+	"iter"
 	"net/http"
 	"testing"
 	"time"
@@ -8,6 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/time/rate"
+
+	"github.com/go-harden/scout/sources"
 )
 
 func TestWithParallelism(t *testing.T) {
@@ -77,4 +81,23 @@ func TestWithHTTPClient(t *testing.T) {
 	WithHTTPClient(custom)(opts)
 
 	assert.Same(t, custom, opts.HTTPClient)
+}
+
+func TestWithSources(t *testing.T) {
+	t.Parallel()
+
+	opts := defaultOptions()
+	customSources := []sources.Source{
+		{
+			Name:   "custom",
+			Yields: sources.Subdomain,
+			Run: func(_ context.Context, _ *http.Client, _ string, _ string) iter.Seq2[sources.Result, error] {
+				return func(_ func(sources.Result, error) bool) {}
+			},
+		},
+	}
+	WithSources(customSources)(opts)
+
+	require.Len(t, opts.Sources, 1)
+	assert.Equal(t, "custom", opts.Sources[0].Name)
 }

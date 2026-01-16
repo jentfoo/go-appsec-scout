@@ -6,12 +6,17 @@ import (
 	"time"
 
 	"golang.org/x/time/rate"
+
+	"github.com/go-harden/scout/sources"
 )
 
 const Version = "0.1.0"
 
 // Options configures the behavior of Query and related functions.
 type Options struct {
+	// Sources specifies which sources to query. If nil, sensible default source selections are made.
+	Sources []sources.Source
+
 	// HTTPClient is the client used for all requests. If nil, a default client with sensible timeouts is used.
 	HTTPClient *http.Client
 
@@ -36,6 +41,13 @@ type Options struct {
 
 // Option is a functional option for configuring Query.
 type Option func(*Options)
+
+// WithSources sets the sources to query.
+func WithSources(srcs []sources.Source) Option {
+	return func(o *Options) {
+		o.Sources = srcs
+	}
+}
 
 // WithHTTPClient sets a custom HTTP client.
 func WithHTTPClient(c *http.Client) Option {
@@ -95,6 +107,7 @@ func WithAPIKey(source, key string) Option {
 // defaultOptions returns Options with sensible defaults.
 func defaultOptions() *Options {
 	return &Options{
+		Sources:     sources.All(),
 		Parallelism: runtime.NumCPU() * 2,
 		Timeout:     30 * time.Second,
 		UserAgent:   "Mozilla/5.0 (compatible; go-harden/scout-v" + Version + ")",

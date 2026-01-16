@@ -20,7 +20,7 @@ func mockSource(name string, yields sources.ResultType, results []sources.Result
 	return sources.Source{
 		Name:   name,
 		Yields: yields,
-		Run: func(_ context.Context, _ string, _ *http.Client, _ string) iter.Seq2[sources.Result, error] {
+		Run: func(_ context.Context, _ *http.Client, _ string, _ string) iter.Seq2[sources.Result, error] {
 			return func(yield func(sources.Result, error) bool) {
 				for _, err := range errs {
 					if !yield(sources.Result{}, err) {
@@ -49,7 +49,7 @@ func TestQuery(t *testing.T) {
 		}, nil)
 
 		var results []sources.Result
-		for result, err := range Query(ctx, "example.com", []sources.Source{src}, WithParallelism(1)) {
+		for result, err := range Query(ctx, "example.com", WithSources([]sources.Source{src}), WithParallelism(1)) {
 			require.NoError(t, err)
 			results = append(results, result)
 		}
@@ -68,7 +68,7 @@ func TestQuery(t *testing.T) {
 		}, nil)
 
 		var results []sources.Result
-		for result, err := range Query(ctx, "example.com", []sources.Source{src1, src2}, WithParallelism(1)) {
+		for result, err := range Query(ctx, "example.com", WithSources([]sources.Source{src1, src2}), WithParallelism(1)) {
 			require.NoError(t, err)
 			results = append(results, result)
 		}
@@ -86,7 +86,7 @@ func TestQuery(t *testing.T) {
 		}, nil)
 
 		var results []sources.Result
-		for result, err := range Query(ctx, "example.com", []sources.Source{src}, WithParallelism(1)) {
+		for result, err := range Query(ctx, "example.com", WithSources([]sources.Source{src}), WithParallelism(1)) {
 			require.NoError(t, err)
 			results = append(results, result)
 		}
@@ -104,7 +104,7 @@ func TestQuery(t *testing.T) {
 
 		var results []sources.Result
 		var errs []error
-		for result, err := range Query(ctx, "example.com", []sources.Source{src}, WithParallelism(1)) {
+		for result, err := range Query(ctx, "example.com", WithSources([]sources.Source{src}), WithParallelism(1)) {
 			if err != nil {
 				errs = append(errs, err)
 				continue
@@ -127,7 +127,7 @@ func TestQuery(t *testing.T) {
 		}, nil)
 
 		count := 0
-		for range Query(ctx, "example.com", []sources.Source{src}, WithParallelism(1)) {
+		for range Query(ctx, "example.com", WithSources([]sources.Source{src}), WithParallelism(1)) {
 			count++
 			if count == 1 {
 				cancel()
@@ -144,7 +144,7 @@ func TestQuery(t *testing.T) {
 		slowSource := sources.Source{
 			Name:   "slow",
 			Yields: sources.Subdomain,
-			Run: func(ctx context.Context, _ string, _ *http.Client, _ string) iter.Seq2[sources.Result, error] {
+			Run: func(ctx context.Context, _ *http.Client, _ string, _ string) iter.Seq2[sources.Result, error] {
 				return func(yield func(sources.Result, error) bool) {
 					select {
 					case <-ctx.Done():
@@ -161,7 +161,8 @@ func TestQuery(t *testing.T) {
 		}
 
 		var results []sources.Result
-		for result, err := range Query(ctx, "example.com", []sources.Source{slowSource},
+		for result, err := range Query(ctx, "example.com",
+			WithSources([]sources.Source{slowSource}),
 			WithParallelism(1),
 			WithTimeout(10*time.Millisecond),
 		) {
@@ -178,7 +179,7 @@ func TestQuery(t *testing.T) {
 		ctx := t.Context()
 
 		var count int
-		for range Query(ctx, "example.com", nil, WithParallelism(1)) {
+		for range Query(ctx, "example.com", WithSources([]sources.Source{}), WithParallelism(1)) {
 			count++
 		}
 
@@ -198,7 +199,7 @@ func TestSubdomains(t *testing.T) {
 	}, nil)
 
 	subs := make([]string, 0, 2)
-	for sub, err := range Subdomains(ctx, "example.com", []sources.Source{src}, WithParallelism(1)) {
+	for sub, err := range Subdomains(ctx, "example.com", WithSources([]sources.Source{src}), WithParallelism(1)) {
 		require.NoError(t, err)
 		subs = append(subs, sub)
 	}
@@ -220,7 +221,7 @@ func TestURLs(t *testing.T) {
 	}, nil)
 
 	urls := make([]string, 0, 2)
-	for url, err := range URLs(ctx, "example.com", []sources.Source{src}, WithParallelism(1)) {
+	for url, err := range URLs(ctx, "example.com", WithSources([]sources.Source{src}), WithParallelism(1)) {
 		require.NoError(t, err)
 		urls = append(urls, url)
 	}

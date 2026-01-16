@@ -35,7 +35,7 @@ type Source struct {
 
 	// Run executes the source query and yields results.
 	// The apiKey parameter is optional and used by sources that support authentication.
-	Run func(ctx context.Context, domain string, client *http.Client, apiKey string) iter.Seq2[Result, error]
+	Run func(ctx context.Context, client *http.Client, domain string, apiKey string) iter.Seq2[Result, error]
 }
 
 // Registry state protected by RWMutex for concurrent access.
@@ -48,30 +48,56 @@ var (
 func Register(s Source) {
 	registryMu.Lock()
 	defer registryMu.Unlock()
+
 	registry[s.Name] = s
+}
+
+// Names returns the names of all registered sources.
+func Names() []string {
+	registryMu.RLock()
+	defer registryMu.RUnlock()
+
+	return bulk.MapKeysSlice(registry)
 }
 
 // ByName returns a source by name, or nil if not found.
 func ByName(name string) *Source {
 	registryMu.RLock()
 	defer registryMu.RUnlock()
+
 	if s, ok := registry[name]; ok {
 		return &s
 	}
 	return nil
 }
 
-// List returns all registered sources as a slice.
-func List() []Source {
+// All returns all registered sources as a slice.
+func All() []Source {
 	registryMu.RLock()
 	defer registryMu.RUnlock()
+
 	return bulk.MapValuesSlice(registry)
 }
 
-// Filter returns sources that yield at least one of the specified types.
-func Filter(want ResultType) []Source {
+// ByNames returns a sources that match for the provided names.
+func ByNames(names ...string) []Source {
 	registryMu.RLock()
 	defer registryMu.RUnlock()
+
+	result := make([]Source, 0, len(names))
+	for _, name := range names {
+		if s, ok := registry[name]; ok {
+			result = append(result, s)
+		}
+	}
+	return result
+}
+
+// ByType returns sources that yield at least one of the specified types.
+func ByType(want ResultType) []Source {
+	registryMu.RLock()
+	defer registryMu.RUnlock()
+
 	result := make([]Source, 0, len(registry))
 	for _, s := range registry {
 		if s.Yields&want != 0 {
@@ -79,11 +105,4 @@ func Filter(want ResultType) []Source {
 		}
 	}
 	return result
-}
-
-// Names returns the names of all registered sources.
-func Names() []string {
-	registryMu.RLock()
-	defer registryMu.RUnlock()
-	return bulk.MapKeysSlice(registry)
 }

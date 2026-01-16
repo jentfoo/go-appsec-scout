@@ -13,9 +13,10 @@ import (
 	"github.com/go-harden/scout/sources"
 )
 
-// Query runs the specified sources against a domain and yields results.
+// Query runs sources against a domain and yields results.
+// By default all registered sources are queried; use WithSources to override.
 // Results are deduplicated across all sources.
-func Query(ctx context.Context, domain string, srcs []sources.Source, opts ...Option) iter.Seq2[sources.Result, error] {
+func Query(ctx context.Context, domain string, opts ...Option) iter.Seq2[sources.Result, error] {
 	cfg := defaultOptions()
 	for _, opt := range opts {
 		opt(cfg)
@@ -59,7 +60,7 @@ func Query(ctx context.Context, domain string, srcs []sources.Source, opts ...Op
 
 		// Start source goroutines
 		var wg sync.WaitGroup
-		for _, src := range srcs {
+		for _, src := range cfg.Sources {
 			wg.Add(1)
 			go func(s sources.Source) {
 				defer wg.Done()
@@ -84,7 +85,7 @@ func Query(ctx context.Context, domain string, srcs []sources.Source, opts ...Op
 					apiKey = cfg.APIKeys[s.Name]
 				}
 
-				for result, err := range s.Run(srcCtx, domain, srcClient, apiKey) {
+				for result, err := range s.Run(srcCtx, srcClient, domain, apiKey) {
 					select {
 					case <-ctx.Done():
 						return
@@ -121,9 +122,11 @@ func Query(ctx context.Context, domain string, srcs []sources.Source, opts ...Op
 }
 
 // Subdomains is a convenience wrapper that filters for Subdomain results only.
-func Subdomains(ctx context.Context, domain string, srcs []sources.Source, opts ...Option) iter.Seq2[string, error] {
+// By default only subdomain-yielding sources are queried; use WithSources to override.
+func Subdomains(ctx context.Context, domain string, opts ...Option) iter.Seq2[string, error] {
+	opts = append([]Option{WithSources(sources.ByType(sources.Subdomain))}, opts...)
 	return func(yield func(string, error) bool) {
-		for result, err := range Query(ctx, domain, srcs, opts...) {
+		for result, err := range Query(ctx, domain, opts...) {
 			if err != nil {
 				if !yield("", err) {
 					return
@@ -140,9 +143,11 @@ func Subdomains(ctx context.Context, domain string, srcs []sources.Source, opts 
 }
 
 // URLs is a convenience wrapper that filters for URL results only.
-func URLs(ctx context.Context, domain string, srcs []sources.Source, opts ...Option) iter.Seq2[string, error] {
+// By default only URL-yielding sources are queried; use WithSources to override.
+func URLs(ctx context.Context, domain string, opts ...Option) iter.Seq2[string, error] {
+	opts = append([]Option{WithSources(sources.ByType(sources.URL))}, opts...)
 	return func(yield func(string, error) bool) {
-		for result, err := range Query(ctx, domain, srcs, opts...) {
+		for result, err := range Query(ctx, domain, opts...) {
 			if err != nil {
 				if !yield("", err) {
 					return
