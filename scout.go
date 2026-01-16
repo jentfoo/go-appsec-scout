@@ -30,16 +30,15 @@ func Query(ctx context.Context, domain string, opts ...Option) iter.Seq2[sources
 		client := cfg.HTTPClient
 		if client == nil {
 			client = &http.Client{
-				Timeout:   cfg.Timeout,
-				Transport: http.DefaultTransport,
+				Timeout: cfg.Timeout,
+				Transport: &userAgentTransport{
+					base:      http.DefaultTransport,
+					userAgent: "Mozilla/5.0 (compatible; go-harden/scout-v" + Version + ")",
+				},
 				CheckRedirect: func(req *http.Request, via []*http.Request) error {
 					return errors.New("redirects not allowed")
 				},
 			}
-		}
-
-		if cfg.UserAgent != "" {
-			client = wrapClientWithUserAgent(client, cfg.UserAgent)
 		}
 
 		if cfg.GlobalRateLimit > 0 {
@@ -208,20 +207,6 @@ func wrapClientWithRateLimiter(client *http.Client, limiter *rate.Limiter) *http
 	}
 	return &http.Client{
 		Transport:     &rateLimitTransport{base: transport, limiter: limiter},
-		CheckRedirect: client.CheckRedirect,
-		Jar:           client.Jar,
-		Timeout:       client.Timeout,
-	}
-}
-
-// wrapClientWithUserAgent returns a new client that sets the User-Agent header on all requests.
-func wrapClientWithUserAgent(client *http.Client, userAgent string) *http.Client {
-	transport := client.Transport
-	if transport == nil {
-		transport = http.DefaultTransport
-	}
-	return &http.Client{
-		Transport:     &userAgentTransport{base: transport, userAgent: userAgent},
 		CheckRedirect: client.CheckRedirect,
 		Jar:           client.Jar,
 		Timeout:       client.Timeout,

@@ -64,15 +64,6 @@ func TestWithSourceRateLimit(t *testing.T) {
 	})
 }
 
-func TestWithUserAgent(t *testing.T) {
-	t.Parallel()
-
-	opts := defaultOptions()
-	WithUserAgent("test-agent/1.0")(opts)
-
-	assert.Equal(t, "test-agent/1.0", opts.UserAgent)
-}
-
 func TestWithHTTPClient(t *testing.T) {
 	t.Parallel()
 

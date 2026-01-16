@@ -32,15 +32,21 @@ type Options struct {
 	// Timeout is the per-source timeout.
 	Timeout time.Duration
 
-	// UserAgent is the User-Agent header sent with requests.
-	UserAgent string
-
 	// APIKeys maps source names to their API keys. Optional keys improve rate limits for some sources.
 	APIKeys map[string]string
 }
 
 // Option is a functional option for configuring Query.
 type Option func(*Options)
+
+// defaultOptions returns Options with sensible defaults.
+func defaultOptions() *Options {
+	return &Options{
+		Sources:     sources.All(),
+		Parallelism: runtime.NumCPU() * 2,
+		Timeout:     30 * time.Second,
+	}
+}
 
 // WithSources sets the sources to query.
 func WithSources(srcs []sources.Source) Option {
@@ -87,13 +93,6 @@ func WithTimeout(d time.Duration) Option {
 	}
 }
 
-// WithUserAgent sets the User-Agent header.
-func WithUserAgent(ua string) Option {
-	return func(o *Options) {
-		o.UserAgent = ua
-	}
-}
-
 // WithAPIKey sets an API key for a specific source.
 func WithAPIKey(source, key string) Option {
 	return func(o *Options) {
@@ -101,15 +100,5 @@ func WithAPIKey(source, key string) Option {
 			o.APIKeys = make(map[string]string)
 		}
 		o.APIKeys[source] = key
-	}
-}
-
-// defaultOptions returns Options with sensible defaults.
-func defaultOptions() *Options {
-	return &Options{
-		Sources:     sources.All(),
-		Parallelism: runtime.NumCPU() * 2,
-		Timeout:     30 * time.Second,
-		UserAgent:   "Mozilla/5.0 (compatible; go-harden/scout-v" + Version + ")",
 	}
 }
