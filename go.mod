@@ -1,4 +1,4 @@
-module github.com/go-harden/scout
+module github.com/go-appsec/scout
 
 go 1.24.0
 

@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/go-harden/scout/sources"
+	"github.com/go-appsec/scout/sources"
 )
 
 // mockSource creates a test source that yields the given results.
@@ -184,6 +184,67 @@ func TestQuery(t *testing.T) {
 		}
 
 		assert.Zero(t, count)
+	})
+
+	t.Run("skips_auth_required_without_key", func(t *testing.T) {
+		ctx := t.Context()
+
+		authSrc := sources.Source{
+			Name:         "auth-required",
+			Yields:       sources.Subdomain,
+			AuthRequired: true,
+			Run: func(_ context.Context, _ *http.Client, _ string, _ string) iter.Seq2[sources.Result, error] {
+				return func(yield func(sources.Result, error) bool) {
+					yield(sources.Result{
+						Type:   sources.Subdomain,
+						Value:  "api.example.com",
+						Source: "auth-required",
+					}, nil)
+				}
+			},
+		}
+
+		var results []sources.Result
+		for result, err := range Query(ctx, "example.com", WithSources([]sources.Source{authSrc}), WithParallelism(1)) {
+			require.NoError(t, err)
+			results = append(results, result)
+		}
+
+		assert.Empty(t, results)
+	})
+
+	t.Run("runs_auth_required_with_key", func(t *testing.T) {
+		ctx := t.Context()
+
+		authSrc := sources.Source{
+			Name:         "auth-required",
+			Yields:       sources.Subdomain,
+			AuthRequired: true,
+			Run: func(_ context.Context, _ *http.Client, _ string, apiKey string) iter.Seq2[sources.Result, error] {
+				return func(yield func(sources.Result, error) bool) {
+					if apiKey != "" {
+						yield(sources.Result{
+							Type:   sources.Subdomain,
+							Value:  "api.example.com",
+							Source: "auth-required",
+						}, nil)
+					}
+				}
+			},
+		}
+
+		var results []sources.Result
+		for result, err := range Query(ctx, "example.com",
+			WithSources([]sources.Source{authSrc}),
+			WithParallelism(1),
+			WithAPIKey("auth-required", "test-key"),
+		) {
+			require.NoError(t, err)
+			results = append(results, result)
+		}
+
+		assert.Len(t, results, 1)
+		assert.Equal(t, "api.example.com", results[0].Value)
 	})
 }
 

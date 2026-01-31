@@ -33,6 +33,10 @@ type Source struct {
 	// Yields indicates what types of results this source can produce.
 	Yields ResultType
 
+	// AuthRequired indicates if an API key is required for this source to function.
+	// Sources with AuthRequired=true are silently skipped when no API key is provided.
+	AuthRequired bool
+
 	// Run executes the source query and yields results.
 	// The apiKey parameter is optional and used by sources that support authentication.
 	Run func(ctx context.Context, client *http.Client, domain string, apiKey string) iter.Seq2[Result, error]

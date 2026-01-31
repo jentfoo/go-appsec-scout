@@ -1,7 +1,7 @@
-# go-harden/scout
+# go-appsec/scout
 
-[![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/go-harden/scout/blob/main/LICENSE)
-[![Build Status](https://github.com/go-harden/scout/actions/workflows/tests-main.yml/badge.svg)](https://github.com/go-harden/scout/actions/workflows/tests-main.yml)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/go-appsec/scout/blob/main/LICENSE)
+[![Build Status](https://github.com/go-appsec/scout/actions/workflows/tests-main.yml/badge.svg)](https://github.com/go-appsec/scout/actions/workflows/tests-main.yml)
 
 A lightweight Go library for passive reconnaissance of domains, discovering subdomains and URLs by querying public APIs. Scout provides a minimal, dependency-light approach to target enumeration for security testing.
 
@@ -25,7 +25,7 @@ Scout can discover:
 ## Quick Start
 
 ```bash
-go get github.com/go-harden/scout@latest
+go get github.com/go-appsec/scout@latest
 ```
 
 ```go
@@ -35,7 +35,7 @@ import (
     "context"
     "fmt"
 
-    "github.com/go-harden/scout"
+    "github.com/go-appsec/scout"
 )
 
 func main() {

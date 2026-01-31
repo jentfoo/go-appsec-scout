@@ -7,7 +7,7 @@ import (
 
 	"golang.org/x/time/rate"
 
-	"github.com/go-harden/scout/sources"
+	"github.com/go-appsec/scout/sources"
 )
 
 const Version = "0.1.0"

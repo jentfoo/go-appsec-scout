@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/time/rate"
 
-	"github.com/go-harden/scout/sources"
+	"github.com/go-appsec/scout/sources"
 )
 
 func TestWithParallelism(t *testing.T) {

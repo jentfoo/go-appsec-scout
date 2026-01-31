@@ -10,7 +10,7 @@ import (
 
 	"golang.org/x/time/rate"
 
-	"github.com/go-harden/scout/sources"
+	"github.com/go-appsec/scout/sources"
 )
 
 // Query runs sources against a domain and yields results.
@@ -33,7 +33,7 @@ func Query(ctx context.Context, domain string, opts ...Option) iter.Seq2[sources
 				Timeout: cfg.Timeout,
 				Transport: &userAgentTransport{
 					base:      http.DefaultTransport,
-					userAgent: "Mozilla/5.0 (compatible; go-harden/scout-v" + Version + ")",
+					userAgent: "Mozilla/5.0 (compatible; go-appsec/scout-v" + Version + ")",
 				},
 				CheckRedirect: func(req *http.Request, via []*http.Request) error {
 					return errors.New("redirects not allowed")
@@ -60,8 +60,18 @@ func Query(ctx context.Context, domain string, opts ...Option) iter.Seq2[sources
 		// Start source goroutines
 		var wg sync.WaitGroup
 		for _, src := range cfg.Sources {
+			// Get API key for this source (if configured)
+			var apiKey string
+			if cfg.APIKeys != nil {
+				apiKey = cfg.APIKeys[src.Name]
+			}
+
+			if src.AuthRequired && apiKey == "" {
+				continue // skip sources without a key that require one
+			}
+
 			wg.Add(1)
-			go func(s sources.Source) {
+			go func(s sources.Source, key string) {
 				defer wg.Done()
 
 				// Acquire semaphore slot
@@ -78,20 +88,14 @@ func Query(ctx context.Context, domain string, opts ...Option) iter.Seq2[sources
 					srcClient = wrapClientWithRateLimiter(srcClient, rate.NewLimiter(limit, 1))
 				}
 
-				// Get API key for this source (if configured)
-				var apiKey string
-				if cfg.APIKeys != nil {
-					apiKey = cfg.APIKeys[s.Name]
-				}
-
-				for result, err := range s.Run(srcCtx, srcClient, domain, apiKey) {
+				for result, err := range s.Run(srcCtx, srcClient, domain, key) {
 					select {
 					case <-ctx.Done():
 						return
 					case results <- resultItem{result: result, err: err}:
 					}
 				}
-			}(src)
+			}(src, apiKey)
 		}
 
 		// Close results when all sources complete

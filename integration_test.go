@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/go-harden/scout/sources"
+	"github.com/go-appsec/scout/sources"
 )
 
 func TestIntegrationQuery(t *testing.T) {
