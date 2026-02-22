@@ -48,7 +48,7 @@ func TestQuery(t *testing.T) {
 			{Type: sources.Subdomain, Value: "www.example.com", Source: "test"},
 		}, nil)
 
-		var results []sources.Result
+		results := make([]sources.Result, 0, 2)
 		for result, err := range Query(ctx, "example.com", WithSources([]sources.Source{src}), WithParallelism(1)) {
 			require.NoError(t, err)
 			results = append(results, result)
@@ -67,7 +67,7 @@ func TestQuery(t *testing.T) {
 			{Type: sources.Subdomain, Value: "api.example.com", Source: "src2"},
 		}, nil)
 
-		var results []sources.Result
+		results := make([]sources.Result, 0, 2)
 		for result, err := range Query(ctx, "example.com", WithSources([]sources.Source{src1, src2}), WithParallelism(1)) {
 			require.NoError(t, err)
 			results = append(results, result)
@@ -85,7 +85,7 @@ func TestQuery(t *testing.T) {
 			{Type: sources.Subdomain, Value: "Api.Example.COM", Source: "test"},
 		}, nil)
 
-		var results []sources.Result
+		results := make([]sources.Result, 0, 3)
 		for result, err := range Query(ctx, "example.com", WithSources([]sources.Source{src}), WithParallelism(1)) {
 			require.NoError(t, err)
 			results = append(results, result)
@@ -204,7 +204,7 @@ func TestQuery(t *testing.T) {
 			},
 		}
 
-		var results []sources.Result
+		results := make([]sources.Result, 0, 1)
 		for result, err := range Query(ctx, "example.com", WithSources([]sources.Source{authSrc}), WithParallelism(1)) {
 			require.NoError(t, err)
 			results = append(results, result)
@@ -233,7 +233,7 @@ func TestQuery(t *testing.T) {
 			},
 		}
 
-		var results []sources.Result
+		results := make([]sources.Result, 0, 1)
 		for result, err := range Query(ctx, "example.com",
 			WithSources([]sources.Source{authSrc}),
 			WithParallelism(1),
